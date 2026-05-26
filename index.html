@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>業務アシスタントAI（デモ）</title>
+<style>
+  :root{
+    --bg:#f6f7f5; --panel:#ffffff; --ink:#1b1f1d; --soft:#5a615c; --faint:#9aa39d;
+    --em:#1f9d6b; --em-deep:#177a52; --em-tint:#e6f4ee; --line:#e6e9e5;
+    --head:#171a18; --bubble-a:#f0f2ee; --bubble-u:#1f9d6b;
+    --sans:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+    --serif:"Hiragino Mincho ProN","Yu Mincho","游明朝",serif;
+    --shadow:0 1px 2px rgba(27,31,29,.05),0 8px 24px rgba(27,31,29,.08);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--sans);color:var(--ink);background:var(--bg);line-height:1.65;-webkit-font-smoothing:antialiased}
+  .app{max-width:760px;margin:0 auto;height:100vh;display:flex;flex-direction:column;background:var(--panel)}
+  @media(min-width:800px){.app{height:100vh;border-left:1px solid var(--line);border-right:1px solid var(--line)}}
+
+  .head{background:var(--head);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:11px}
+  .head .av{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#28c489,#177a52);display:grid;place-items:center;font-size:17px}
+  .head .t{font-weight:800;font-size:16px;line-height:1.2}
+  .head .t small{display:block;font-weight:400;font-size:11px;color:#9fb3aa}
+  .head .chip{font-size:9.5px;letter-spacing:.14em;font-weight:800;background:var(--em);padding:3px 8px;border-radius:99px}
+  .head .gear{margin-left:auto;background:rgba(255,255,255,.12);border:0;color:#fff;width:34px;height:34px;border-radius:9px;cursor:pointer;font-size:16px}
+  .modechip{font-size:10.5px;color:#9fb3aa;background:rgba(255,255,255,.08);padding:3px 9px;border-radius:99px}
+
+  .quick{display:flex;gap:7px;padding:11px 16px;overflow-x:auto;border-bottom:1px solid var(--line);background:#fbfcfb}
+  .quick::-webkit-scrollbar{height:0}
+  .qa{flex:none;border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 13px;font-size:12.5px;color:var(--soft);cursor:pointer;font-family:var(--sans);white-space:nowrap}
+  .qa:hover{border-color:var(--em);color:var(--em-deep)}
+
+  .msgs{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:14px}
+  .m{display:flex;gap:10px;max-width:88%}
+  .m.user{align-self:flex-end;flex-direction:row-reverse}
+  .m .ic{width:30px;height:30px;border-radius:9px;flex:none;display:grid;place-items:center;font-size:14px}
+  .m.bot .ic{background:var(--em-tint);color:var(--em-deep)}
+  .m.user .ic{background:#e7e9e5;color:var(--soft)}
+  .bubble{padding:11px 14px;border-radius:13px;font-size:14px;white-space:pre-wrap;word-break:break-word}
+  .m.bot .bubble{background:var(--bubble-a);border-top-left-radius:4px}
+  .m.user .bubble{background:var(--bubble-u);color:#fff;border-top-right-radius:4px}
+  .m .bubble .src{display:block;font-size:10.5px;color:var(--faint);margin-top:7px}
+  .typing{display:flex;gap:4px;padding:13px 14px}
+  .typing i{width:7px;height:7px;border-radius:50%;background:var(--faint);animation:bb 1.2s infinite}
+  .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+  @keyframes bb{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+
+  .hello{text-align:center;color:var(--faint);margin:auto;padding:30px}
+  .hello .big{font-family:var(--serif);font-size:22px;color:var(--ink);margin-bottom:6px}
+  .hello p{font-size:13px}
+
+  .composer{border-top:1px solid var(--line);padding:12px 14px;display:flex;gap:10px;align-items:flex-end;background:#fbfcfb}
+  .composer textarea{flex:1;border:1px solid var(--line);border-radius:14px;padding:11px 14px;font-family:var(--sans);font-size:14px;resize:none;max-height:140px;background:#fff}
+  .composer textarea:focus{outline:2px solid var(--em-tint);border-color:var(--em)}
+  .send{border:0;background:var(--em);color:#fff;width:44px;height:44px;border-radius:12px;cursor:pointer;font-size:18px;flex:none}
+  .send:disabled{background:#b9c6c0}
+  .clear{background:none;border:0;color:var(--faint);font-size:11.5px;cursor:pointer;font-family:var(--sans)}
+  .foot{text-align:center;color:var(--faint);font-size:10.5px;padding:0 0 8px}
+
+  .modal{position:fixed;inset:0;background:rgba(20,25,22,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .modal.show{display:flex}
+  .mbox{background:#fff;border-radius:16px;width:430px;max-width:100%;box-shadow:var(--shadow)}
+  .mbox h3{margin:0;padding:18px 22px;border-bottom:1px solid var(--line);font-size:17px}
+  .mform{padding:18px 22px}
+  .mform label{display:block;font-size:12px;color:var(--soft);font-weight:700;margin:12px 0 5px}
+  .mform input,.mform select{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-family:var(--sans);font-size:14px}
+  .note{font-size:11.5px;color:var(--soft);background:var(--em-tint);border-radius:10px;padding:10px 13px;margin-top:14px;line-height:1.6}
+  .mfoot{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-family:var(--sans);font-size:13px;font-weight:700;color:var(--soft);cursor:pointer}
+  .btn.primary{background:var(--em);border-color:var(--em);color:#fff}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="head">
+    <div class="av">🤖</div>
+    <div class="t">業務アシスタントAI <small id="modeLabel">デモモード（APIキー不要）</small></div>
+    <span class="chip">DEMO</span>
+    <button class="gear" onclick="openSettings()" title="設定">⚙</button>
+  </div>
+
+  <div class="quick" id="quick"></div>
+
+  <div class="msgs" id="msgs">
+    <div class="hello" id="hello">
+      <div class="big">なにをお手伝いしましょう？</div>
+      <p>上のボタンから「メール作成」「議事録の要約」などを選ぶか、<br>下に文章を入力して送ってください。</p>
+    </div>
+  </div>
+
+  <div class="composer">
+    <textarea id="input" rows="1" placeholder="メッセージを入力（Enterで送信 / Shift+Enterで改行）"></textarea>
+    <button class="send" id="send" onclick="onSend()">➤</button>
+  </div>
+  <div class="foot"><button class="clear" onclick="clearChat()">会話をクリア</button> ・ デモモードの応答は簡易ロジックです ・ © 2026 鈴木颯</div>
+</div>
+
+<!-- settings -->
+<div class="modal" id="settings">
+  <div class="mbox">
+    <h3>設定</h3>
+    <div class="mform">
+      <label>応答モード</label>
+      <select id="provider" onchange="onProvider()">
+        <option value="demo">デモモード（APIキー不要・簡易ロジック）</option>
+        <option value="openai">OpenAI API（実際のAI応答）</option>
+        <option value="anthropic">Anthropic API（実際のAI応答）</option>
+      </select>
+      <div id="keyWrap" style="display:none">
+        <label>APIキー</label><input id="apiKey" type="password" placeholder="sk-... / sk-ant-...">
+        <label>モデル</label><input id="model" placeholder="（空欄で既定モデル）">
+      </div>
+      <div class="note">🔒 APIキーはこのブラウザ（localStorage）にのみ保存され、送信先は各社のAPIだけです。サーバーには送られません。デモモードならキー不要で動作します。</div>
+    </div>
+    <div class="mfoot"><button class="btn" onclick="closeSettings()">閉じる</button><button class="btn primary" onclick="saveSettings()">保存</button></div>
+  </div>
+</div>
+
+<script>
+const KEY="aiassist_demo_v1", CFG="aiassist_cfg_v1";
+const ACTIONS=[
+  {id:"mail",  label:"✉️ ビジネスメール作成"},
+  {id:"summary",label:"📝 議事録を要約"},
+  {id:"polish",label:"✨ 文章を丁寧に校正"},
+  {id:"copy",  label:"💡 キャッチコピー"},
+  {id:"bullets",label:"• 箇条書きを整える"}
+];
+let history = load(KEY) || [];
+let cfg = load(CFG) || {provider:"demo", apiKey:"", model:""};
+let pendingAction = null;
+
+function load(k){ try{return JSON.parse(localStorage.getItem(k))}catch(e){return null} }
+function save(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
+
+/* quick actions */
+document.getElementById('quick').innerHTML=ACTIONS.map(a=>`<button class="qa" onclick="pick('${a.id}')">${a.label}</button>`).join("");
+function pick(id){
+  pendingAction=id;
+  const ph={mail:"用件を入力してください（例：来週の打合せの日程調整をお願いしたい）",
+    summary:"要約したい議事録・長文を貼り付けてください",
+    polish:"丁寧にしたい文章を入力してください",
+    copy:"商品・サービスのキーワードを入力（例：春日部 観光 周遊 アプリ）",
+    bullets:"箇条書きにしたい内容を入力してください"}[id];
+  const inp=document.getElementById('input'); inp.placeholder=ph; inp.focus();
+}
+
+/* render */
+function renderMode(){
+  document.getElementById('modeLabel').textContent =
+    cfg.provider==="demo" ? "デモモード（APIキー不要）" :
+    cfg.provider==="openai" ? "OpenAI API モード" : "Anthropic API モード";
+}
+function render(){
+  const box=document.getElementById('msgs');
+  const hello=document.getElementById('hello');
+  if(history.length){ if(hello)hello.remove(); }
+  box.querySelectorAll('.m,.typingwrap').forEach(e=>e.remove());
+  history.forEach(m=>box.appendChild(msgEl(m)));
+  box.scrollTop=box.scrollHeight;
+  renderMode();
+}
+function msgEl(m){
+  const el=document.createElement('div'); el.className='m '+(m.role==='user'?'user':'bot');
+  el.innerHTML=`<div class="ic">${m.role==='user'?'🙂':'🤖'}</div><div class="bubble">${esc(m.text)}${m.src?`<span class="src">${m.src}</span>`:''}</div>`;
+  return el;
+}
+function showTyping(){
+  const box=document.getElementById('msgs');
+  const w=document.createElement('div'); w.className='m bot typingwrap';
+  w.innerHTML=`<div class="ic">🤖</div><div class="bubble typing"><i></i><i></i><i></i></div>`;
+  box.appendChild(w); box.scrollTop=box.scrollHeight; return w;
+}
+
+/* send */
+const input=document.getElementById('input');
+input.addEventListener('input',()=>{ input.style.height='auto'; input.style.height=Math.min(140,input.scrollHeight)+'px'; });
+input.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); onSend(); } });
+
+async function onSend(){
+  const text=input.value.trim(); if(!text)return;
+  const action=pendingAction; pendingAction=null;
+  history.push({role:'user',text}); save(KEY,history);
+  input.value=''; input.style.height='auto'; input.placeholder="メッセージを入力（Enterで送信 / Shift+Enterで改行）";
+  render();
+  const typing=showTyping();
+  document.getElementById('send').disabled=true;
+  try{
+    let reply;
+    if(cfg.provider!=="demo" && cfg.apiKey){ reply=await callAPI(text,action); }
+    else { await wait(500+Math.random()*400); reply={text:demoReply(text,action), src:"デモ応答（簡易ロジック）"}; }
+    typing.remove();
+    history.push({role:'bot',text:reply.text,src:reply.src}); save(KEY,history); render();
+  }catch(err){
+    typing.remove();
+    history.push({role:'bot',text:demoReply(text,action),src:"⚠️ API呼び出しに失敗したためデモ応答を表示しました（"+(err.message||err)+"）"});
+    save(KEY,history); render();
+  }
+  document.getElementById('send').disabled=false;
+}
+function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* ---- デモ応答エンジン（APIキー無しでも必ず動く）---- */
+function demoReply(text, action){
+  if(action==="mail") return genMail(text);
+  if(action==="summary") return genSummary(text);
+  if(action==="polish") return genPolish(text);
+  if(action==="copy") return genCopy(text);
+  if(action==="bullets") return genBullets(text);
+  // 通常チャット
+  if(/(要約|まとめ)/.test(text)) return genSummary(text);
+  if(/(メール|文面)/.test(text)) return genMail(text);
+  return "承知しました。次のような形でお手伝いできます：\n・ビジネスメールの作成\n・議事録の要約\n・文章の丁寧な校正\n・キャッチコピーの案出し\n・箇条書きの整形\n\n上のボタンを選ぶか、ご用件をもう少し詳しく教えてください。";
+}
+function sentences(t){ return t.split(/[。\n！？.!?]/).map(s=>s.trim()).filter(s=>s.length>1); }
+function genMail(t){
+  return `件名：${(t.length>22?t.slice(0,22)+"…":t)||"ご連絡"}\n\n〇〇 様\n\nいつもお世話になっております。鈴木でございます。\n\n${t||"（ご用件）"}につきまして、ご連絡いたしました。\nお手数をおかけしますが、ご確認のほどよろしくお願いいたします。\n\n何卒よろしくお願い申し上げます。\n\n―――――――\n鈴木 颯`;
+}
+function genSummary(t){
+  const ss=sentences(t);
+  if(ss.length<=1) return "要約する本文を貼り付けてください。複数の文に分けて要点を抽出します。";
+  const pick=ss.filter((s,i)=>i%Math.ceil(ss.length/4)===0).slice(0,5);
+  return "【要約】\n"+pick.map(s=>"・"+s).join("\n")+`\n\n（全${ss.length}文から主要な${pick.length}点を抽出しました）`;
+}
+function genPolish(t){
+  let r=t.replace(/だ。/g,"です。").replace(/する。/g,"いたします。").replace(/した。/g,"いたしました。")
+        .replace(/して下さい/g,"してください").replace(/思う/g,"存じます").replace(/すみません/g,"恐れ入ります");
+  return "【丁寧に整えた例】\n"+r+"\n\n（語尾や定型表現をビジネス向けに調整しました。文脈に合わせて微調整してください）";
+}
+function genCopy(t){
+  const kw=t.split(/[\s、,　]+/).filter(Boolean);
+  const k=kw.length?kw:["新サービス"];
+  const a=k.join("・");
+  return "【キャッチコピー案】\n"+[
+    `${k[0]}を、もっと身近に。`,
+    `はじめよう、${k[0]}のある毎日。`,
+    `${a}── その先の体験へ。`,
+    `${k[0]}が、あなたの一手になる。`,
+    `小さく始めて、大きく広がる。${k[0]}。`
+  ].map((c,i)=>`${i+1}. ${c}`).join("\n");
+}
+function genBullets(t){
+  const lines=t.split(/[\n、。]/).map(s=>s.trim()).filter(Boolean);
+  if(!lines.length) return "箇条書きにしたい内容を入力してください。";
+  return lines.map(l=>"・"+l).join("\n");
+}
+
+/* ---- 実APIモード（任意）---- */
+async function callAPI(text, action){
+  const prompt = action ? actionPrompt(action)+"\n\n"+text : text;
+  if(cfg.provider==="openai"){
+    const res=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+cfg.apiKey},
+      body:JSON.stringify({model:cfg.model||"gpt-4o-mini",messages:[{role:"user",content:prompt}]})});
+    if(!res.ok) throw new Error("OpenAI "+res.status);
+    const j=await res.json(); return {text:j.choices[0].message.content.trim(), src:"OpenAI ("+(cfg.model||"gpt-4o-mini")+")"};
+  } else {
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":cfg.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:cfg.model||"claude-3-5-haiku-20241022",max_tokens:1024,messages:[{role:"user",content:prompt}]})});
+    if(!res.ok) throw new Error("Anthropic "+res.status);
+    const j=await res.json(); return {text:j.content[0].text.trim(), src:"Anthropic ("+(cfg.model||"claude-3-5-haiku")+")"};
+  }
+}
+function actionPrompt(a){ return {
+  mail:"次の用件で、丁寧なビジネスメールを作成してください。",
+  summary:"次の文章を、要点を箇条書きにして要約してください。",
+  polish:"次の文章を、ビジネス向けの丁寧な表現に校正してください。",
+  copy:"次のキーワードから、魅力的なキャッチコピーを5案作成してください。",
+  bullets:"次の内容を、見やすい箇条書きに整理してください。"}[a]||""; }
+
+/* settings */
+function openSettings(){ document.getElementById('provider').value=cfg.provider; document.getElementById('apiKey').value=cfg.apiKey||""; document.getElementById('model').value=cfg.model||""; onProvider(); document.getElementById('settings').classList.add('show'); }
+function closeSettings(){ document.getElementById('settings').classList.remove('show'); }
+function onProvider(){ document.getElementById('keyWrap').style.display=document.getElementById('provider').value==="demo"?"none":"block"; }
+function saveSettings(){ cfg={provider:document.getElementById('provider').value,apiKey:document.getElementById('apiKey').value.trim(),model:document.getElementById('model').value.trim()}; save(CFG,cfg); closeSettings(); renderMode(); }
+function clearChat(){ if(!confirm("会話をクリアします。よろしいですか？"))return; history=[]; save(KEY,history); location.reload(); }
+function esc(s){ return (s==null?"":""+s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+render();
+</script>
+</body>
+</html>
