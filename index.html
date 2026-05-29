@@ -75,10 +75,10 @@
 <body>
 <div class="app">
   <div class="head">
-    <div class="av">🤖</div>
+    <div class="av">AI</div>
     <div class="t">業務アシスタントAI <small id="modeLabel">デモモード（APIキー不要）</small></div>
     <span class="chip">DEMO</span>
-    <button class="gear" onclick="openSettings()" title="設定">⚙</button>
+    <button class="gear" onclick="openSettings()" title="設定" style="width:auto;padding:0 12px;font-size:13px">設定</button>
   </div>
 
   <div class="quick" id="quick"></div>
@@ -92,7 +92,7 @@
 
   <div class="composer">
     <textarea id="input" rows="1" placeholder="メッセージを入力（Enterで送信 / Shift+Enterで改行）"></textarea>
-    <button class="send" id="send" onclick="onSend()">➤</button>
+    <button class="send" id="send" onclick="onSend()">→</button>
   </div>
   <div class="foot"><button class="clear" onclick="clearChat()">会話をクリア</button> ・ デモモードの応答は簡易ロジックです ・ © 2026 鈴木颯</div>
 </div>
@@ -112,7 +112,7 @@
         <label>APIキー</label><input id="apiKey" type="password" placeholder="sk-... / sk-ant-...">
         <label>モデル</label><input id="model" placeholder="（空欄で既定モデル）">
       </div>
-      <div class="note">🔒 APIキーはこのブラウザ（localStorage）にのみ保存され、送信先は各社のAPIだけです。サーバーには送られません。デモモードならキー不要で動作します。</div>
+      <div class="note">APIキーはこのブラウザ（localStorage）にのみ保存され、送信先は各社のAPIだけです。サーバーには送られません。デモモードならキー不要で動作します。</div>
     </div>
     <div class="mfoot"><button class="btn" onclick="closeSettings()">閉じる</button><button class="btn primary" onclick="saveSettings()">保存</button></div>
   </div>
@@ -121,10 +121,10 @@
 <script>
 const KEY="aiassist_demo_v1", CFG="aiassist_cfg_v1";
 const ACTIONS=[
-  {id:"mail",  label:"✉️ ビジネスメール作成"},
-  {id:"summary",label:"📝 議事録を要約"},
-  {id:"polish",label:"✨ 文章を丁寧に校正"},
-  {id:"copy",  label:"💡 キャッチコピー"},
+  {id:"mail",  label:"ビジネスメール作成"},
+  {id:"summary",label:"議事録を要約"},
+  {id:"polish",label:"文章を丁寧に校正"},
+  {id:"copy",  label:"キャッチコピー"},
   {id:"bullets",label:"• 箇条書きを整える"}
 ];
 let history = load(KEY) || [];
@@ -163,13 +163,13 @@ function render(){
 }
 function msgEl(m){
   const el=document.createElement('div'); el.className='m '+(m.role==='user'?'user':'bot');
-  el.innerHTML=`<div class="ic">${m.role==='user'?'🙂':'🤖'}</div><div class="bubble">${esc(m.text)}${m.src?`<span class="src">${m.src}</span>`:''}</div>`;
+  el.innerHTML=`<div class="ic">${m.role==='user'?'私':'AI'}</div><div class="bubble">${esc(m.text)}${m.src?`<span class="src">${m.src}</span>`:''}</div>`;
   return el;
 }
 function showTyping(){
   const box=document.getElementById('msgs');
   const w=document.createElement('div'); w.className='m bot typingwrap';
-  w.innerHTML=`<div class="ic">🤖</div><div class="bubble typing"><i></i><i></i><i></i></div>`;
+  w.innerHTML=`<div class="ic">AI</div><div class="bubble typing"><i></i><i></i><i></i></div>`;
   box.appendChild(w); box.scrollTop=box.scrollHeight; return w;
 }
 
